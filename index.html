@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d9e1e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16212d" media="(prefers-color-scheme: dark)">
+<title>FAM Flashcards</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="cards.js"></script>
+<script defer src="cards-fam-l.js"></script>
+<script defer src="cards-annuities.js"></script>
+<script defer src="cards-insurances.js"></script>
+<style>
+  :root {
+    --desk: #d9e1e7;
+    --paper: #fbfcf8;
+    --grid: #e2eaf0;
+    --margin: #e3a6a6;
+    --ink: #18304f;
+    --muted: #5a6a7d;
+    --line: #c3cfd9;
+    --known: #2f7a57;
+    --learning: #b5422c;
+    --hl: #f3d556;
+    --btn: #18304f;
+    --btn-ink: #fbfcf8;
+    --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif: "Literata", Georgia, "Times New Roman", serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --desk: #16212d;
+      --paper: #1f2c3b;
+      --grid: #263649;
+      --margin: #7a4646;
+      --ink: #e6edf5;
+      --muted: #9fb0c3;
+      --line: #34475d;
+      --known: #6cc79b;
+      --learning: #ef8b72;
+      --hl: #c9a92b;
+      --btn: #e6edf5;
+      --btn-ink: #16212d;
+    }
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--desk);
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 12px 14px calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Header */
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { font-family: var(--serif); font-weight: 600; font-size: 1.25rem; margin: 6px 0 2px; letter-spacing: -0.01em; }
+  .count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.95rem; white-space: nowrap; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 8px 0 10px; display: flex; }
+  .progress span { display: block; height: 100%; transition: width .25s ease; }
+  .progress .k { background: var(--known); }
+  .progress .l { background: var(--learning); }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip {
+    font: 500 0.88rem var(--ui);
+    color: var(--ink);
+    background: transparent;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    min-height: 36px;
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chip.quiet { border-color: transparent; color: var(--muted); padding-inline: 6px; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Card: engineering-pad sheet */
+  .stage { perspective: 1200px; }
+  .card {
+    position: relative;
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -1px -1px;
+    border-radius: 6px;
+    box-shadow: 0 1px 0 var(--line), 0 10px 24px -14px rgba(20, 40, 70, .45);
+    min-height: min(62dvh, 520px);
+    padding: 18px 18px 22px 34px;
+    cursor: pointer;
+    outline: none;
+    transition: transform .16s ease-in;
+    touch-action: pan-y;
+  }
+  .card::before {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 22px;
+    width: 1.5px; background: var(--margin);
+  }
+  .card:focus-visible { box-shadow: 0 0 0 3px var(--hl), 0 10px 24px -14px rgba(20,40,70,.45); }
+  .card.turning { transform: rotateY(90deg); }
+  .meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+  .status { display: inline-flex; align-items: center; gap: 6px; }
+  .status i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: inline-block; }
+  .status.known i { background: var(--known); }
+  .status.learning i { background: var(--learning); }
+
+  .front { display: flex; flex-direction: column; justify-content: center; min-height: calc(min(62dvh, 520px) - 70px); }
+  .front h2 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(1.8rem, 7.5vw, 2.6rem);
+    line-height: 1.12; margin: 0 0 14px; letter-spacing: -0.015em;
+  }
+  .front h2 .katex { font-size: 1em; }
+  .front p { font-size: 1.05rem; color: var(--muted); margin: 0; max-width: 34ch; }
+  .hint { margin-top: 28px; font-size: 0.85rem; color: var(--muted); }
+
+  .back h3 { font-family: var(--serif); font-weight: 600; font-size: 1.2rem; margin: 0 0 6px; }
+  .formula {
+    overflow-x: auto; overflow-y: hidden;
+    padding: 2px 0; margin: 2px 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  .formula .katex-display { margin: 0.45em 0; text-align: left; }
+  .formula .katex-display > .katex { text-align: left; }
+  .formula .katex { font-size: 1.04em; }
+  .section-label { font-family: var(--serif); font-size: 0.98rem; font-weight: 600; margin: 16px 0 6px; }
+  dl.where { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; font-size: 0.95rem; }
+  dl.where dt { white-space: nowrap; }
+  dl.where dd { margin: 0; color: var(--ink); }
+  .note {
+    font-family: var(--serif); font-size: 1rem; line-height: 1.6;
+    margin: 0; padding: 10px 12px;
+    background: color-mix(in srgb, var(--hl) 28%, transparent);
+    border-radius: 4px;
+  }
+  .rawmath { font-family: ui-monospace, Menlo, monospace; font-size: .85em; }
+
+  /* Bottom controls, thumb reach */
+  .controls {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: color-mix(in srgb, var(--desk) 88%, transparent);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line);
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .controls .row { max-width: 680px; margin: 0 auto; display: grid; grid-template-columns: 46px 1fr 1fr 46px; gap: 8px; }
+  .controls .learn, .controls .know { white-space: nowrap; font-size: .95rem; }
+  .controls button {
+    min-height: 52px; border-radius: 10px; font: 600 1rem var(--ui); cursor: pointer;
+    border: 1.5px solid var(--line); background: var(--paper); color: var(--ink);
+  }
+  .controls .nav { font-size: 1.4rem; line-height: 1; }
+  .controls .primary { background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
+  .controls .learn { color: var(--learning); border-color: currentColor; }
+  .controls .know { background: var(--known); border-color: var(--known); color: #fff; }
+  .controls .span2 { grid-column: span 2; }
+  button:focus-visible, .chip:focus-visible { outline: 3px solid var(--hl); outline-offset: 2px; }
+  button:disabled { opacity: .35; cursor: default; }
+
+  .empty { text-align: center; padding: 60px 10px; font-family: var(--serif); font-size: 1.1rem; }
+  .empty p { color: var(--muted); font-family: var(--ui); font-size: .95rem; }
+
+  [hidden] { display: none !important; }
+
+  /* Back link (deck view) */
+  .backlink {
+    display: inline-flex; align-items: center; gap: 4px;
+    min-height: 36px; margin: 2px 0 0 -2px; padding: 0 2px;
+    color: var(--muted); font: 500 0.9rem var(--ui); text-decoration: none;
+  }
+  .backlink:focus-visible { outline: 3px solid var(--hl); outline-offset: 2px; border-radius: 4px; }
+
+  /* Home: deck picker */
+  .home-head h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); margin: 14px 0 4px; line-height: 1.15; }
+  .home-head p { color: var(--muted); margin: 0 0 20px; }
+  .decks { display: grid; gap: 16px; }
+  .deck {
+    position: relative; display: block; width: 100%; text-align: left;
+    font: inherit; color: var(--ink); cursor: pointer;
+    border: 0; border-radius: 6px;
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -1px -1px;
+    box-shadow: 0 1px 0 var(--line), 0 10px 24px -14px rgba(20, 40, 70, .45);
+    padding: 20px 18px 20px 34px;
+  }
+  .deck::before {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 22px;
+    width: 1.5px; background: var(--margin);
+  }
+  .deck:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--hl), 0 10px 24px -14px rgba(20,40,70,.45); }
+  .deck:active { transform: translateY(1px); }
+  .deck h2 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(1.6rem, 6.5vw, 2.1rem);
+    line-height: 1.12; margin: 0 0 6px; letter-spacing: -0.015em;
+  }
+  .deck .desc { margin: 0 0 16px; color: var(--muted); max-width: 40ch; }
+  .deck .progress { margin: 0 0 8px; }
+  .deck .stat { font-size: 0.88rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  @media (min-width: 720px) {
+    .card { padding: 24px 28px 28px 48px; }
+    .card::before { left: 30px; }
+    .deck { padding: 24px 28px 24px 48px; }
+    .deck::before { left: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card, .progress span { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="home" hidden>
+  <div class="home-head">
+    <h1>FAM flashcards</h1>
+    <p>Pick a deck to study.</p>
+  </div>
+  <div class="decks" id="decks"></div>
+</div>
+
+<div class="app" id="deckview" hidden>
+  <a class="backlink" href="#" id="back">&#8249; All decks</a>
+  <header>
+    <h1 id="decktitle"></h1>
+    <span class="count" id="count"></span>
+  </header>
+  <div class="progress" aria-hidden="true"><span class="k" id="pk"></span><span class="l" id="pl"></span></div>
+  <div class="tools">
+    <button class="chip" id="shuffle" aria-pressed="false">Shuffle</button>
+    <button class="chip" id="filter" aria-pressed="false">Still learning only</button>
+    <button class="chip" id="startback" aria-pressed="false">Show formulas first</button>
+    <button class="chip quiet" id="reset">Reset progress</button>
+  </div>
+  <main class="stage">
+    <article class="card" id="card" tabindex="0" aria-live="polite"></article>
+  </main>
+</div>
+
+<nav class="controls" id="controlbar" aria-label="Card controls" hidden>
+  <div class="row" id="controls"></div>
+</nav>
+
+<script>
+(function () {
+  // ---- Decks ----
+  // FAM-S keeps its original storage key so earlier progress carries over.
+  const DECKS = [
+    { key: "fam-s", title: "FAM-S distributions", desc: "Severity and frequency distributions: moments, survival functions, deductible shortcuts.", store: "famS-dist-v1", cards: () => window.CARDS || [] },
+    { key: "fam-l", title: "FAM-L formulas", desc: "Life contingencies: survival models, insurances, annuities, premiums, policy values.", store: "famL-formulas-v1", cards: () => window.CARDS_FAML || [] },
+    { key: "annuities", title: "Types of annuities", desc: "One-sentence explanations of each annuity type on Exam FAM.", store: "famL-annuities-v1", cards: () => window.CARDS_ANNUITIES || [] },
+    { key: "insurances", title: "Types of insurances", desc: "One-sentence explanations of each insurance type on Exam FAM.", store: "famL-insurances-v1", cards: () => window.CARDS_INSURANCES || [] }
+  ];
+  let deck = null, CARDS = [], STORE = "";
+  const state = { order: [], i: 0, flipped: false, shuffle: false, filter: false, startBack: false, marks: {} };
+
+  function readStore(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
+  }
+
+  function load() {
+    const s = readStore(STORE);
+    state.marks = s.marks || {};
+    state.shuffle = !!s.shuffle;
+    state.filter = !!s.filter;
+    state.startBack = !!s.startBack;
+  }
+  function save() {
+    try {
+      localStorage.setItem(STORE, JSON.stringify({
+        marks: state.marks, shuffle: state.shuffle, filter: state.filter, startBack: state.startBack
+      }));
+    } catch (e) {}
+  }
+
+  // ---- Math rendering ----
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function tex(src, display) {
+    if (window.katex) {
+      try { return katex.renderToString(src, { displayMode: display, throwOnError: false, strict: "ignore" }); }
+      catch (e) {}
+    }
+    return '<span class="rawmath">' + esc(src) + "</span>";
+  }
+  // Text with inline \( ... \) math
+  function rich(s) {
+    let out = "", last = 0;
+    const re = /\\\(([\s\S]+?)\\\)/g;
+    let m;
+    while ((m = re.exec(s))) {
+      out += esc(s.slice(last, m.index)) + tex(m[1], false);
+      last = re.lastIndex;
+    }
+    return out + esc(s.slice(last));
+  }
+
+  // ---- Deck ----
+  function buildOrder() {
+    let ids = CARDS.map((c, idx) => idx);
+    if (state.filter) ids = ids.filter(idx => state.marks[CARDS[idx].id] !== "known");
+    if (state.shuffle) {
+      for (let k = ids.length - 1; k > 0; k--) {
+        const j = Math.floor(Math.random() * (k + 1));
+        [ids[k], ids[j]] = [ids[j], ids[k]];
+      }
+    }
+    state.order = ids;
+    state.i = Math.min(state.i, Math.max(ids.length - 1, 0));
+  }
+
+  const cardEl = document.getElementById("card");
+  const ctrlEl = document.getElementById("controls");
+
+  function current() { return CARDS[state.order[state.i]]; }
+
+  function statusHTML(c) {
+    const m = state.marks[c.id];
+    if (m === "known") return '<span class="status known"><i></i>Got it</span>';
+    if (m === "learning") return '<span class="status learning"><i></i>Still learning</span>';
+    return '<span class="status"><i></i>New</span>';
+  }
+
+  function renderCard() {
+    const total = state.order.length;
+    if (!total) {
+      cardEl.innerHTML = '<div class="empty">Every card is marked as known.<p>Turn off "Still learning only" or reset progress to study again.</p></div>';
+      renderControls();
+      renderHeader();
+      return;
+    }
+    const c = current();
+    const meta = '<div class="meta"><span>Card ' + (CARDS.indexOf(c) + 1) + "</span>" + statusHTML(c) + "</div>";
+    if (!state.flipped) {
+      cardEl.innerHTML = meta +
+        '<div class="front"><h2>' + rich(c.title) + "</h2><p>" + rich(c.subtitle) + "</p>" +
+        '<div class="hint">Tap the card to see the formulas. Swipe left or right to move.</div></div>';
+      cardEl.setAttribute("aria-label", "Front of card");
+    } else {
+      let h = meta + '<div class="back"><h3>' + rich(c.title) + "</h3>";
+      c.formulas.forEach(f => { h += '<div class="formula">' + tex(f, true) + "</div>"; });
+      h += '<div class="section-label">Where</div><dl class="where">';
+      c.where.forEach(([sym, def]) => { h += "<dt>" + tex(sym, false) + "</dt><dd>" + rich(def) + "</dd>"; });
+      h += '</dl><div class="section-label">What\u2019s going on</div><p class="note">' + rich(c.note) + "</p></div>";
+      cardEl.innerHTML = h;
+      cardEl.setAttribute("aria-label", "Back of card");
+    }
+    renderControls();
+    renderHeader();
+  }
+
+  function renderHeader() {
+    const total = state.order.length;
+    document.getElementById("count").textContent = total ? (state.i + 1) + " of " + total : "0 of 0";
+    const n = CARDS.length;
+    const k = CARDS.filter(c => state.marks[c.id] === "known").length;
+    const l = CARDS.filter(c => state.marks[c.id] === "learning").length;
+    document.getElementById("pk").style.width = (100 * k / n) + "%";
+    document.getElementById("pl").style.width = (100 * l / n) + "%";
+    document.getElementById("shuffle").setAttribute("aria-pressed", state.shuffle);
+    document.getElementById("filter").setAttribute("aria-pressed", state.filter);
+    document.getElementById("startback").setAttribute("aria-pressed", state.startBack);
+  }
+
+  function renderControls() {
+    const total = state.order.length;
+    const prev = '<button class="nav" id="prev" aria-label="Previous card"' + (state.i === 0 || !total ? " disabled" : "") + ">\u2039</button>";
+    const next = '<button class="nav" id="next" aria-label="Next card"' + (state.i >= total - 1 ? " disabled" : "") + ">\u203A</button>";
+    let mid;
+    if (!total) mid = '<button class="span2" disabled>No cards</button>';
+    else if (!state.flipped) mid = '<button class="primary span2" id="flip">Show formulas</button>';
+    else mid = '<button class="learn" id="learn">Still learning</button><button class="know" id="know">Got it</button>';
+    ctrlEl.innerHTML = prev + mid + next;
+    bind("prev", () => go(-1));
+    bind("next", () => go(1));
+    bind("flip", flip);
+    bind("learn", () => mark("learning"));
+    bind("know", () => mark("known"));
+  }
+  function bind(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function turn(after) {
+    if (reduce) { after(); return; }
+    cardEl.classList.add("turning");
+    setTimeout(() => { after(); cardEl.classList.remove("turning"); }, 160);
+  }
+
+  function flip() {
+    if (!state.order.length) return;
+    turn(() => { state.flipped = !state.flipped; renderCard(); });
+  }
+  function go(d) {
+    const ni = state.i + d;
+    if (ni < 0 || ni >= state.order.length) return;
+    state.i = ni;
+    state.flipped = state.startBack;
+    renderCard();
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  }
+  function mark(v) {
+    const c = current();
+    state.marks[c.id] = v;
+    save();
+    if (state.filter && v === "known") {
+      // card leaves the filtered deck; stay at same index
+      buildOrder();
+      state.flipped = state.startBack;
+      renderCard();
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    } else if (state.i < state.order.length - 1) {
+      go(1);
+    } else {
+      renderCard();
+    }
+  }
+
+  // ---- Input ----
+  cardEl.addEventListener("click", e => {
+    if (window.getSelection && String(window.getSelection())) return;
+    flip();
+  });
+  let sx = 0, sy = 0, swipeOK = false;
+  cardEl.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    sx = t.clientX; sy = t.clientY;
+    swipeOK = !e.target.closest(".formula");
+  }, { passive: true });
+  cardEl.addEventListener("touchend", e => {
+    if (!swipeOK) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
+      e.preventDefault();
+      go(dx < 0 ? 1 : -1);
+    }
+  });
+  document.addEventListener("keydown", e => {
+    if (!deck) return;
+    if (e.target.closest && e.target.closest("button, a")) {
+      if (e.key === " " || e.key === "Enter") return;
+    }
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
+    else if (e.key === "ArrowRight") go(1);
+    else if (e.key === "ArrowLeft") go(-1);
+    else if (state.flipped && e.key === "1") mark("learning");
+    else if (state.flipped && e.key === "2") mark("known");
+  });
+
+  document.getElementById("shuffle").addEventListener("click", () => {
+    state.shuffle = !state.shuffle; state.i = 0; state.flipped = state.startBack; save(); buildOrder(); renderCard();
+  });
+  document.getElementById("filter").addEventListener("click", () => {
+    state.filter = !state.filter; state.i = 0; state.flipped = state.startBack; save(); buildOrder(); renderCard();
+  });
+  document.getElementById("startback").addEventListener("click", () => {
+    state.startBack = !state.startBack; state.flipped = state.startBack; save(); renderCard();
+  });
+  document.getElementById("reset").addEventListener("click", () => {
+    if (!confirm("Clear all Got it / Still learning marks?")) return;
+    state.marks = {}; state.i = 0; state.flipped = state.startBack; save(); buildOrder(); renderCard();
+  });
+
+  // ---- Views: home (deck picker) and deck ----
+  const homeEl = document.getElementById("home");
+  const deckEl = document.getElementById("deckview");
+  const barEl = document.getElementById("controlbar");
+
+  function renderHome() {
+    let h = "";
+    DECKS.forEach(d => {
+      const cards = d.cards();
+      const marks = readStore(d.store).marks || {};
+      const n = cards.length;
+      const k = cards.filter(c => marks[c.id] === "known").length;
+      const l = cards.filter(c => marks[c.id] === "learning").length;
+      const stat = (k || l)
+        ? k + " of " + n + " marked Got it, " + l + " still learning"
+        : n + " cards, not started";
+      h += '<button class="deck" data-key="' + d.key + '">' +
+        "<h2>" + esc(d.title) + "</h2>" +
+        '<p class="desc">' + esc(d.desc) + "</p>" +
+        '<div class="progress" aria-hidden="true"><span class="k" style="width:' + (n ? 100 * k / n : 0) + '%"></span><span class="l" style="width:' + (n ? 100 * l / n : 0) + '%"></span></div>' +
+        '<div class="stat">' + stat + "</div></button>";
+    });
+    const box = document.getElementById("decks");
+    box.innerHTML = h;
+    box.querySelectorAll(".deck").forEach(b => b.addEventListener("click", () => { location.hash = b.dataset.key; }));
+  }
+
+  function showHome() {
+    deck = null;
+    deckEl.hidden = true; barEl.hidden = true; homeEl.hidden = false;
+    document.title = "FAM Flashcards";
+    renderHome();
+  }
+
+  function openDeck(d) {
+    deck = d;
+    CARDS = d.cards();
+    STORE = d.store;
+    load();
+    state.i = 0;
+    state.flipped = state.startBack;
+    buildOrder();
+    document.getElementById("decktitle").textContent = d.title;
+    document.title = d.title;
+    homeEl.hidden = true; deckEl.hidden = false; barEl.hidden = false;
+    renderCard();
+    window.scrollTo(0, 0);
+  }
+
+  function route() {
+    const key = location.hash.replace(/^#/, "");
+    const d = DECKS.find(x => x.key === key);
+    if (d) openDeck(d); else showHome();
+  }
+
+  window.addEventListener("hashchange", route);
+  window.addEventListener("DOMContentLoaded", route);
+})();
+</script>
+</body>
+</html>
